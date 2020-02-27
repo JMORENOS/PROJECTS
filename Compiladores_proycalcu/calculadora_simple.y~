@@ -1,0 +1,89 @@
+%{
+#include <stdio.h>
+#include <stdlib.h>
+#include <math.h>
+#define pi 3.1416
+float radianes(float grados);
+float grados(float radian);
+extern int yylineno;//extern para no modificar el valor de donde se encuentra la variable y no generar doble espacio de memoria
+extern char * yytext;
+int valor;
+%}
+
+%union
+{
+    float real;
+}
+%token <real> TKN_NUM//sin <real> por defecto son enteros (terminal)
+%token TKN_PTOCOMA
+%token TKN_PA
+%token TKN_PC
+%token TKN_MAS
+%token TKN_MENOS
+%token TKN_MULT
+%token TKN_DIV
+%token TKN_POW
+%token TKN_RAIZ
+%token TKN_SEN
+%token TKN_COS
+%token TKN_TAN
+%type <real> Expresion//%type se declara solo cuando queremos cambiar el tipo de dato a los no terminales
+%left TKN_MAS TKN_MENOS//%left formama en que se van a resolver la operación ((3+4)+2) como asociar %right (4^(2^3))
+%left TKN_DIV TKN_MULT
+%right TKN_POW
+%left TKN_SIGNO_MENOS
+//%left '*'
+//%left UMINUS
+%start Inicio//%start Calculadora; %prec 
+%%
+
+Inicio: Inicio Calculadora | Calculadora ;
+
+Calculadora :Expresion TKN_PTOCOMA { printf("%5.2f\n", $1); };
+	     
+Expresion :  TKN_NUM {$$=$1;}|
+             Expresion TKN_MAS Expresion {$$=$1+$3;}|
+             Expresion TKN_MENOS Expresion {$$=$1-$3;}|
+	     Expresion TKN_MULT Expresion {$$=$1*$3;}|
+	     Expresion TKN_DIV Expresion {$$=$1/$3;}|
+	     Expresion TKN_POW Expresion {$$=pow($1,$3);}|
+	     TKN_MENOS Expresion %prec TKN_SIGNO_MENOS {$$=-($2);}|
+	     TKN_PA Expresion TKN_PC{$$=$2;}|
+	     TKN_RAIZ TKN_PA Expresion TKN_PC{
+		if($2<0){
+			valor=0;
+		}else{
+			$$=sqrt($2);
+			valor=1;
+		}
+		
+	     }|
+	     TKN_COS TKN_PA Expresion TKN_PC{$$=grados(cos(radianes($3)));}|
+	     TKN_SEN TKN_PA Expresion TKN_PC{$$=grados(sin(radianes($3)));}|
+	     TKN_TAN TKN_PA Expresion TKN_PC{$$=grados(tan(radianes($3)));}
+;
+
+%%
+
+int yyerror(char *msg)
+{
+	printf("%d: %s en '%s'\n", yylineno, msg, yytext);
+}
+
+float radianes(float grad){
+	return grad*(pi/180);
+}
+
+float grados(float radian){
+	return radian*(180/pi);
+}
+
+int main()
+{
+
+    yyparse();
+
+    printf("Numero lineas analizadas: %d\n", yylineno);
+    return (0);
+}
+
